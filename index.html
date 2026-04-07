@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐻 Honey Bear Chase</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;900&display=swap');
+
+:root {
+  --sky: #5c94fc;
+  --ground: #6b8c42;
+  --mario-red: #e52222;
+  --mario-yellow: #ffd700;
+  --mario-green: #3a9e3a;
+  --coin: #ffd700;
+  --ui-bg: rgba(0,0,30,0.82);
+  --white: #fff;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #1a0a2e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Press Start 2P', monospace;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+#game-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+}
+
+#hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--ui-bg);
+  border-radius: 10px 10px 0 0;
+  border: 3px solid #ffd700;
+  border-bottom: none;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hud-item {
+  font-size: clamp(7px, 1.5vw, 11px);
+  color: var(--mario-yellow);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.hud-val { color: #fff; }
+
+#canvas-container {
+  position: relative;
+  width: 100%;
+  border: 3px solid #ffd700;
+  border-top: none;
+  border-bottom: none;
+  overflow: hidden;
+  background: #5c94fc;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+#dpad-bar {
+  background: var(--ui-bg);
+  border: 3px solid #ffd700;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 110px;
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: 44px 44px 44px;
+  grid-template-rows: 44px 44px;
+  gap: 4px;
+}
+
+.dpad-btn {
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,215,0,0.5);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  color: #fff;
+  touch-action: none;
+  transition: background 0.08s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dpad-btn:active, .dpad-btn.pressed {
+  background: rgba(255,215,0,0.35);
+  border-color: #ffd700;
+}
+
+/* Overlay screens */
+.overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.78);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  gap: 16px;
+  padding: 20px;
+}
+
+.overlay.active { display: flex; }
+
+.overlay-box {
+  background: #1a0a2e;
+  border: 4px solid var(--mario-yellow);
+  border-radius: 16px;
+  padding: 28px 36px;
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+}
+
+.overlay-title {
+  font-size: clamp(14px, 4vw, 22px);
+  color: var(--mario-yellow);
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+
+.overlay-sub {
+  font-size: clamp(8px, 2vw, 11px);
+  color: #ccc;
+  margin-bottom: 18px;
+  line-height: 1.9;
+}
+
+.mario-btn {
+  display: inline-block;
+  padding: 12px 28px;
+  background: var(--mario-red);
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(9px, 2.5vw, 13px);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  border-bottom: 5px solid #9e0000;
+  transition: transform 0.1s, border-bottom 0.1s;
+  touch-action: manipulation;
+}
+
+.mario-btn:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+}
+
+.star-row { font-size: 22px; letter-spacing: 4px; margin-bottom: 8px; }
+
+#key-timer-bar-wrap {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  z-index: 50;
+}
+
+#key-timer-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+#key-timer-bar-bg {
+  width: 100%;
+  height: 10px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 5px;
+  border: 2px solid #fff;
+  overflow: hidden;
+}
+
+#key-timer-bar {
+  height: 100%;
+  background: #ffd700;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+</style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <div id="hud">
+    <div class="hud-item">❤️ <span class="hud-val" id="hud-lives">3</span></div>
+    <div class="hud-item">🍯 <span class="hud-val" id="hud-jars">0</span> / <span class="hud-val" id="hud-goal">3</span></div>
+    <div class="hud-item">🏆 <span class="hud-val" id="hud-score">0</span></div>
+    <div class="hud-item">LVL <span class="hud-val" id="hud-level">1</span></div>
+    <div class="hud-item">🐝 <span class="hud-val" id="hud-bees">0</span></div>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <!-- overlays inside canvas-container so they scale with it -->
+    <div class="overlay active" id="overlay-start">
+      <div class="overlay-box">
+        <div class="star-row">⭐🐻⭐</div>
+        <div class="overlay-title">HONEY BEAR<br>CHASE</div>
+        <div class="overlay-sub">
+          Collect honey jars 🍯<br>
+          Dodge angry bees 🐝<br>
+          Grab hearts ❤️ for extra lives<br>
+          Find keys 🗝️ to teleport!
+        </div>
+        <button class="mario-btn" id="btn-start">▶ START</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay-levelclear">
+      <div class="overlay-box">
+        <div class="star-row">⭐⭐⭐</div>
+        <div class="overlay-title" id="lc-title">LEVEL CLEAR!</div>
+        <div class="overlay-sub" id="lc-sub"></div>
+        <button class="mario-btn" id="btn-next">NEXT LEVEL ▶</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay-gameover">
+      <div class="overlay-box">
+        <div class="star-row">💀🐝💀</div>
+        <div class="overlay-title">GAME OVER</div>
+        <div class="overlay-sub" id="go-sub"></div>
+        <button class="mario-btn" id="btn-restart">▶ TRY AGAIN</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay-win">
+      <div class="overlay-box">
+        <div class="star-row">🏆🐻🏆</div>
+        <div class="overlay-title">YOU WIN!</div>
+        <div class="overlay-sub" id="win-sub"></div>
+        <button class="mario-btn" id="btn-win-restart">▶ PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <!-- key timer bar -->
+    <div id="key-timer-bar-wrap">
+      <div id="key-timer-label">ENTER A DOOR!</div>
+      <div id="key-timer-bar-bg"><div id="key-timer-bar"></div></div>
+    </div>
+  </div>
+
+  <div id="dpad-bar">
+    <div class="dpad">
+      <div></div>
+      <div class="dpad-btn" id="dbtn-up">▲</div>
+      <div></div>
+      <div class="dpad-btn" id="dbtn-left">◀</div>
+      <div class="dpad-btn" id="dbtn-down">▼</div>
+      <div class="dpad-btn" id="dbtn-right">▶</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CANVAS SETUP ─────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const CW = 800, CH = 500;
+
+// ─── LEVEL CONFIG ─────────────────────────────────────────────
+const LEVELS = [
+  { goal:3,  beeSpeedBase:1.2, beeSpeedAdd:0.15 }, // 1
+  { goal:5,  beeSpeedBase:1.4, beeSpeedAdd:0.15 }, // 2
+  { goal:7,  beeSpeedBase:1.6, beeSpeedAdd:0.15 }, // 3
+  { goal:8,  beeSpeedBase:1.8, beeSpeedAdd:0.18 }, // 4
+  { goal:10, beeSpeedBase:2.0, beeSpeedAdd:0.18 }, // 5
+  { goal:11, beeSpeedBase:2.2, beeSpeedAdd:0.20 }, // 6
+  { goal:12, beeSpeedBase:2.4, beeSpeedAdd:0.20 }, // 7
+  { goal:13, beeSpeedBase:2.6, beeSpeedAdd:0.22 }, // 8
+  { goal:15, beeSpeedBase:2.8, beeSpeedAdd:0.22 }, // 9
+  { goal:18, beeSpeedBase:3.0, beeSpeedAdd:0.25 }, // 10
+];
+
+// ─── GAME STATE ───────────────────────────────────────────────
+let G = {};
+let animId = null;
+let keys = {};
+let dpad = { up:false, down:false, left:false, right:false };
+
+const BEAR_R = 20, BEE_R = 10;
+const BEAR_SPEED = 3.6;
+const HEART_INTERVAL = 600; // frames (~10s at 60fps)
+const KEY_DURATION = 300;   // frames (~5s)
+const KEY_SPAWN_CHANCE = 0.004; // per frame
+const COLORED_KEY_CHANCE = 0.35;
+const DOOR_W = 28, DOOR_H = 48;
+const COLORS = ['red','blue','green','yellow'];
+const COLOR_HEX = { red:'#e52222', blue:'#3399ff', green:'#33cc33', yellow:'#ffd700' };
+
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function dst(ax,ay,bx,by) { return Math.sqrt((ax-bx)**2+(ay-by)**2); }
+function clamp(v,a,b) { return Math.max(a, Math.min(b, v)); }
+
+function safePos(avoid, avoidR, margin=50) {
+  let x, y, tries = 0;
+  do {
+    x = rnd(margin, CW - margin);
+    y = rnd(margin, CH - margin);
+    tries++;
+  } while (tries < 300 && dst(x, y, avoid.x, avoid.y) < avoidR);
+  return { x, y };
+}
+
+function beeSpeed(level) {
+  const cfg = LEVELS[level - 1];
+  return cfg.beeSpeedBase + G.bees.length * cfg.beeSpeedAdd * 0.05;
+}
+
+function initGame(level) {
+  level = level || 1;
+  const cfg = LEVELS[level - 1];
+  const bear = { x: CW/2, y: CH/2, r: BEAR_R, inv: 0, vx:0, vy:0 };
+  const jp = safePos(bear, 150);
+  G = {
+    level,
+    score: G.score || 0,
+    lives: G.lives !== undefined ? G.lives : 3,
+    jarsCollected: 0,
+    jarGoal: cfg.goal,
+    bear,
+    bees: [],
+    jar: { x: jp.x, y: jp.y },
+    hearts: [],
+    heartTimer: 0,
+    key: null,
+    doors: [],
+    keyTimer: 0,
+    keyActive: false,
+    running: false,
+    particles: [],
+  };
+  // start with 2 bees
+  spawnBee(); spawnBee();
+  updateHUD();
+}
+
+function spawnBee() {
+  const p = safePos(G.bear, 120);
+  const cfg = LEVELS[G.level - 1];
+  const spd = cfg.beeSpeedBase + Math.random() * 0.3;
+  G.bees.push({ x:p.x, y:p.y, vx:(Math.random()-0.5)*2, vy:(Math.random()-0.5)*2, r:BEE_R, speed:spd, wingsPhase: Math.random()*Math.PI*2 });
+}
+
+function spawnDoors(colorKey) {
+  G.doors = [];
+  const activeIdx = colorKey ? Math.floor(Math.random() * 4) : -1;
+  const positions = [
+    { x: 20,     y: CH/2,    dir:'left'  },
+    { x: CW-20,  y: CH/2,    dir:'right' },
+    { x: CW/2,   y: 20,      dir:'up'    },
+    { x: CW/2,   y: CH-20,   dir:'down'  },
+  ];
+  positions.forEach((pos, i) => {
+    const isActive = colorKey ? i === activeIdx : true;
+    const col = colorKey ? (isActive ? colorKey : 'gray') : COLORS[i];
+    G.doors.push({ ...pos, color: col, active: isActive, open: false });
+  });
+  G.keyActive = true;
+  G.keyTimer = KEY_DURATION;
+}
+
+function teleport(door) {
+  // Pick a random destination from ALL other doors (active or not)
+  // This ensures colored-key mode (only 1 active door) still teleports somewhere
+  const others = G.doors.filter(d => d !== door);
+  if (others.length === 0) return;
+  const dest = others[Math.floor(Math.random() * others.length)];
+
+  // Place bear just inside the canvas from the destination door
+  const offset = 60;
+  G.bear.x = dest.x + (dest.dir === 'left' ? offset : dest.dir === 'right' ? -offset : 0);
+  G.bear.y = dest.y + (dest.dir === 'up'   ? offset : dest.dir === 'down'  ? -offset : 0);
+
+  G.bear.inv = 90;
+  addParticles(G.bear.x, G.bear.y, '#a0f0ff', 20);
+  G.doors = [];
+  G.keyActive = false;
+  G.key = null;
+  document.getElementById('key-timer-bar-wrap').style.display = 'none';
+}
+
+function addParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = rnd(1, 4);
+    G.particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 40, maxLife: 40, color });
+  }
+}
+
+function updateHUD() {
+  document.getElementById('hud-lives').textContent = G.lives;
+  document.getElementById('hud-jars').textContent = G.jarsCollected;
+  document.getElementById('hud-goal').textContent = G.jarGoal;
+  document.getElementById('hud-score').textContent = G.score;
+  document.getElementById('hud-level').textContent = G.level;
+  document.getElementById('hud-bees').textContent = G.bees.length;
+}
+
+// ─── DRAWING ──────────────────────────────────────────────────
+
+function drawBackground() {
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0,0,0,CH);
+  sky.addColorStop(0, '#5c94fc');
+  sky.addColorStop(0.65, '#9ab8ff');
+  sky.addColorStop(0.65, '#6b8c42');
+  sky.addColorStop(1, '#4a6a2e');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Pixel clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  drawCloud(100, 70, 0.9);
+  drawCloud(350, 50, 1.2);
+  drawCloud(600, 80, 0.8);
+  drawCloud(750, 45, 1.0);
+
+  // Ground details — grass tufts
+  ctx.fillStyle = '#5a7e34';
+  for (let x = 0; x < CW; x += 32) {
+    const yb = CH - 2;
+    ctx.beginPath();
+    ctx.moveTo(x, yb);
+    ctx.lineTo(x+4, yb-8);
+    ctx.lineTo(x+8, yb);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x+12, yb);
+    ctx.lineTo(x+16, yb-6);
+    ctx.lineTo(x+20, yb);
+    ctx.fill();
+  }
+
+  // Flowers
+  const flowerData = [[80,CH-12],[200,CH-14],[420,CH-10],[570,CH-13],[700,CH-11]];
+  flowerData.forEach(([fx,fy]) => drawFlower(fx, fy));
+}
+
+function drawCloud(x, y, scale) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(25, 5, 15, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-22, 5, 14, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 10, 25, 0, Math.PI); ctx.fill();
+  ctx.restore();
+}
+
+function drawFlower(x, y) {
+  const petalC = ['#ff6b9d','#ffb347','#ff6666','#b366ff','#66ccff'];
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = '#5a7e34';
+  ctx.fillRect(-1, -12, 2, 12);
+  const pc = petalC[Math.floor(x/80) % petalC.length];
+  ctx.fillStyle = pc;
+  for (let a = 0; a < 5; a++) {
+    ctx.save();
+    ctx.rotate(a * Math.PI * 2 / 5);
+    ctx.beginPath(); ctx.ellipse(0, -6, 3, 5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// --- BEAR (Mario-style) ---
+function drawBear(b) {
+  ctx.save();
+  if (b.inv > 0 && Math.floor(Date.now()/80)%2===0) { ctx.globalAlpha = 0.3; }
+
+  const x = b.x, y = b.y;
+
+  // Body
+  ctx.fillStyle = '#8B5E3C';
+  ctx.beginPath(); ctx.ellipse(x, y+4, 16, 18, 0, 0, Math.PI*2); ctx.fill();
+
+  // Belly
+  ctx.fillStyle = '#D4956A';
+  ctx.beginPath(); ctx.ellipse(x, y+8, 10, 12, 0, 0, Math.PI*2); ctx.fill();
+
+  // Overalls (Mario-style)
+  ctx.fillStyle = '#e52222';
+  ctx.fillRect(x-11, y+2, 22, 14);
+  ctx.fillStyle = '#1a1aaa';
+  ctx.beginPath(); ctx.arc(x-6, y+4, 5, Math.PI, 0); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+6, y+4, 5, Math.PI, 0); ctx.fill();
+  // Overall buckles
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(x-8, y, 4, 3);
+  ctx.fillRect(x+4, y, 4, 3);
+
+  // Head
+  ctx.fillStyle = '#8B5E3C';
+  ctx.beginPath(); ctx.arc(x, y-12, 16, 0, Math.PI*2); ctx.fill();
+
+  // Ears
+  ctx.fillStyle = '#6B4423';
+  ctx.beginPath(); ctx.arc(x-13, y-24, 8, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+13, y-24, 8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#D4956A';
+  ctx.beginPath(); ctx.arc(x-13, y-24, 5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+13, y-24, 5, 0, Math.PI*2); ctx.fill();
+
+  // Snout
+  ctx.fillStyle = '#D4956A';
+  ctx.beginPath(); ctx.ellipse(x, y-8, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(x-6, y-15, 3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+6, y-15, 3, 0, Math.PI*2); ctx.fill();
+  // Eye shine
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x-5, y-16, 1, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+7, y-16, 1, 0, Math.PI*2); ctx.fill();
+
+  // Nose
+  ctx.fillStyle = '#3a1a00';
+  ctx.beginPath(); ctx.ellipse(x, y-8, 3, 2, 0, 0, Math.PI*2); ctx.fill();
+
+  // Hat (Mario red cap)
+  ctx.fillStyle = '#cc0000';
+  ctx.beginPath(); ctx.arc(x, y-20, 14, Math.PI, 0); ctx.fill();
+  ctx.fillRect(x-17, y-22, 34, 5);
+  // M on cap
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 8px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('M', x, y-18);
+
+  ctx.restore();
+}
+
+// --- BEE (chunky pixel style) ---
+function drawBee(bee) {
+  ctx.save();
+  ctx.translate(bee.x, bee.y);
+
+  // Wing animation
+  const wf = Math.sin(bee.wingsPhase) * 0.3;
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle = '#cce8ff';
+  ctx.beginPath(); ctx.ellipse(-5, -9 + wf*3, 7, 5, -0.4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5, -9 + wf*3, 7, 5, 0.4, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Body
+  ctx.fillStyle = '#f5c400';
+  ctx.beginPath(); ctx.ellipse(0, 0, 10, 7, 0, 0, Math.PI*2); ctx.fill();
+
+  // Stripes
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-8, -2, 16, 3);
+  ctx.fillRect(-7, 2, 14, 2);
+
+  // Head
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(10, 0, 6, 0, Math.PI*2); ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(12, -2, 2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(12.5, -2, 1, 0, Math.PI*2); ctx.fill();
+
+  // Stinger
+  ctx.fillStyle = '#555';
+  ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-15, 0); ctx.lineTo(-10, 2); ctx.fill();
+
+  ctx.restore();
+}
+
+// --- JAR ---
+function drawJar(j, bobY) {
+  ctx.save();
+  ctx.translate(j.x, j.y + (bobY || 0));
+
+  // Glow
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur = 14;
+
+  // Jar body
+  ctx.fillStyle = '#faa500';
+  ctx.beginPath(); ctx.roundRect(-12, -14, 24, 26, 5); ctx.fill();
+
+  // Honey inside
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath(); ctx.roundRect(-9, -10, 18, 18, 4); ctx.fill();
+
+  // Shine
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath(); ctx.roundRect(-8, -9, 6, 12, 3); ctx.fill();
+
+  // Lid
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#d4d4d4';
+  ctx.beginPath(); ctx.roundRect(-12, -20, 24, 8, 3); ctx.fill();
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.strokeRect(-12, -20, 24, 8);
+
+  // Drip
+  ctx.fillStyle = '#faa500';
+  ctx.beginPath(); ctx.arc(4, 13, 4, 0, Math.PI); ctx.fill();
+
+  ctx.restore();
+}
+
+// --- HEART ---
+function drawHeart(h) {
+  ctx.save();
+  const sc = 1 + 0.1 * Math.sin(h.pulse * 0.12);
+  ctx.translate(h.x, h.y);
+  ctx.scale(sc, sc);
+  ctx.shadowColor = '#ff4466';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#ff2244';
+  ctx.beginPath();
+  ctx.moveTo(0, 5);
+  ctx.bezierCurveTo(-16,-8,-16,-22,0,-15);
+  ctx.bezierCurveTo(16,-22,16,-8,0,5);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath(); ctx.ellipse(-5, -10, 4, 6, -0.4, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// --- KEY ---
+function drawKey(k) {
+  if (!k) return;
+  ctx.save();
+  ctx.translate(k.x, k.y + Math.sin(Date.now()*0.004)*4);
+  ctx.shadowColor = k.color === 'white' ? '#ffd700' : COLOR_HEX[k.color] || '#ffd700';
+  ctx.shadowBlur = 16;
+
+  const col = k.color === 'white' ? '#ffd700' : COLOR_HEX[k.color];
+
+  // Key bow
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#1a0a2e';
+  ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+
+  // Key shaft
+  ctx.fillStyle = col;
+  ctx.fillRect(10, -3, 22, 6);
+  ctx.fillRect(24, 3, 5, 6);
+  ctx.fillRect(30, 3, 4, 6);
+
+  // Label
+  ctx.font = 'bold 8px sans-serif';
+  ctx.fillStyle = '#1a0a2e';
+  ctx.textAlign = 'center';
+  ctx.fillText('🗝', 0, 3);
+
+  ctx.restore();
+}
+
+// --- DOORS ---
+function drawDoor(d) {
+  ctx.save();
+  const col = d.active ? (COLOR_HEX[d.color] || '#aaa') : '#555';
+  ctx.shadowColor = d.active ? col : 'transparent';
+  ctx.shadowBlur = d.active ? 12 : 0;
+
+  let dw, dh, dx, dy, rx=0, ry=0;
+  if (d.dir === 'left') { dw=18; dh=DOOR_H; dx=d.x-9; dy=d.y-dh/2; }
+  else if (d.dir === 'right') { dw=18; dh=DOOR_H; dx=d.x-9; dy=d.y-dh/2; }
+  else if (d.dir === 'up') { dw=DOOR_H; dh=18; dx=d.x-dw/2; dy=d.y-9; }
+  else { dw=DOOR_H; dh=18; dx=d.x-dw/2; dy=d.y-9; }
+
+  // Frame
+  ctx.strokeStyle = col; ctx.lineWidth = 3;
+  ctx.strokeRect(dx, dy, dw, dh);
+
+  // Fill
+  ctx.fillStyle = d.active ? col + '44' : '#33333388';
+  ctx.fillRect(dx, dy, dw, dh);
+
+  // Arrow
+  if (d.active) {
+    ctx.fillStyle = col;
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    const arrows = { left:'←', right:'→', up:'↑', down:'↓' };
+    ctx.fillText(arrows[d.dir], d.x, d.y + 5);
+  }
+
+  ctx.restore();
+}
+
+// --- PARTICLES ---
+function drawParticles() {
+  G.particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+// ─── UPDATE ───────────────────────────────────────────────────
+
+function separateBees() {
+  const bees = G.bees;
+  for (let i = 0; i < bees.length; i++) {
+    for (let j = i+1; j < bees.length; j++) {
+      const a = bees[i], b = bees[j];
+      const minD = a.r + b.r + 2;
+      const d = dst(a.x, a.y, b.x, b.y);
+      if (d < minD && d > 0.01) {
+        const nx = (b.x-a.x)/d, ny = (b.y-a.y)/d;
+        const ov = (minD-d)/2;
+        a.x -= nx*ov; a.y -= ny*ov;
+        b.x += nx*ov; b.y += ny*ov;
+        const dvx = a.vx-b.vx, dvy = a.vy-b.vy;
+        const dot = dvx*nx+dvy*ny;
+        if (dot > 0) { a.vx -= dot*nx; a.vy -= dot*ny; b.vx += dot*nx; b.vy += dot*ny; }
+      }
+    }
+  }
+}
+
+let jarBob = 0;
+
+function gameLoop() {
+  if (!G.running) return;
+  const b = G.bear;
+
+  // Bear movement
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']||keys['a']||dpad.left) dx -= 1;
+  if (keys['ArrowRight']||keys['d']||dpad.right) dx += 1;
+  if (keys['ArrowUp']||keys['w']||dpad.up) dy -= 1;
+  if (keys['ArrowDown']||keys['s']||dpad.down) dy += 1;
+  if (dx && dy) { dx *= 0.707; dy *= 0.707; }
+  b.x = clamp(b.x + dx * BEAR_SPEED, b.r, CW - b.r);
+  b.y = clamp(b.y + dy * BEAR_SPEED, b.r, CH - b.r);
+  if (b.inv > 0) b.inv--;
+
+  jarBob = Math.sin(Date.now() * 0.004) * 5;
+
+  // Bees
+  G.bees.forEach(bee => {
+    bee.wingsPhase += 0.4;
+    const ang = Math.atan2(b.y - bee.y, b.x - bee.x);
+    const spd = bee.speed;
+    bee.vx = bee.vx * 0.88 + Math.cos(ang) * spd * 0.12;
+    bee.vy = bee.vy * 0.88 + Math.sin(ang) * spd * 0.12;
+    const s2 = Math.sqrt(bee.vx**2+bee.vy**2);
+    if (s2 > spd) { bee.vx = bee.vx/s2*spd; bee.vy = bee.vy/s2*spd; }
+    bee.x += bee.vx; bee.y += bee.vy;
+    if (bee.x < bee.r) { bee.x = bee.r; bee.vx = Math.abs(bee.vx); }
+    if (bee.x > CW-bee.r) { bee.x = CW-bee.r; bee.vx = -Math.abs(bee.vx); }
+    if (bee.y < bee.r) { bee.y = bee.r; bee.vy = Math.abs(bee.vy); }
+    if (bee.y > CH-bee.r) { bee.y = CH-bee.r; bee.vy = -Math.abs(bee.vy); }
+  });
+  separateBees();
+
+  // Bee hit bear
+  if (b.inv === 0) {
+    for (let bee of G.bees) {
+      if (dst(bee.x, bee.y, b.x, b.y) < b.r + bee.r - 2) {
+        G.lives--;
+        b.inv = 120;
+        addParticles(b.x, b.y, '#ff4444', 12);
+        updateHUD();
+        if (G.lives <= 0) { endGame(); return; }
+        break;
+      }
+    }
+  }
+
+  // Jar collect
+  if (dst(G.jar.x, G.jar.y, b.x, b.y) < b.r + 16) {
+    G.jarsCollected++;
+    G.score += 10 * G.level;
+    addParticles(G.jar.x, G.jar.y, '#ffd700', 18);
+    spawnBee();
+    if (G.jarsCollected >= G.jarGoal) {
+      updateHUD();
+      levelClear();
+      return;
+    }
+    const np = safePos(b, 130);
+    G.jar = { x: np.x, y: np.y };
+    updateHUD();
+  }
+
+  // Hearts
+  G.heartTimer++;
+  if (G.heartTimer >= HEART_INTERVAL) {
+    G.heartTimer = 0;
+    const hp = safePos(b, 100);
+    G.hearts.push({ x:hp.x, y:hp.y, pulse:0 });
+  }
+  G.hearts = G.hearts.filter(h => {
+    h.pulse++;
+    if (dst(h.x, h.y, b.x, b.y) < b.r + 16) {
+      G.lives = Math.min(G.lives + 1, 6);
+      addParticles(h.x, h.y, '#ff88aa', 15);
+      updateHUD();
+      return false;
+    }
+    return true;
+  });
+
+  // Key spawning
+  if (!G.key && !G.keyActive && Math.random() < KEY_SPAWN_CHANCE) {
+    const isColored = Math.random() < COLORED_KEY_CHANCE;
+    const kp = safePos(b, 100);
+    const col = isColored ? COLORS[Math.floor(Math.random()*COLORS.length)] : 'white';
+    G.key = { x:kp.x, y:kp.y, color: col };
+  }
+
+  // Key collect
+  if (G.key && dst(G.key.x, G.key.y, b.x, b.y) < b.r + 14) {
+    const col = G.key.color;
+    G.key = null;
+    G.score += 50;
+    addParticles(b.x, b.y, col === 'white' ? '#ffd700' : COLOR_HEX[col], 20);
+    spawnDoors(col === 'white' ? null : col);
+    document.getElementById('key-timer-bar-wrap').style.display = 'flex';
+    updateHUD();
+  }
+
+  // Door timer
+  if (G.keyActive) {
+    G.keyTimer--;
+    const frac = G.keyTimer / KEY_DURATION;
+    const bar = document.getElementById('key-timer-bar');
+    bar.style.width = (frac * 100) + '%';
+    bar.style.background = frac > 0.4 ? '#ffd700' : '#ff4444';
+
+    if (G.keyTimer <= 0) {
+      G.doors = [];
+      G.keyActive = false;
+      document.getElementById('key-timer-bar-wrap').style.display = 'none';
+    }
+
+    // Check door entry
+    for (let door of G.doors) {
+      if (!door.active) continue;
+      if (dst(door.x, door.y, b.x, b.y) < 40) {
+        teleport(door);
+        break;
+      }
+    }
+  }
+
+  // Particles
+  G.particles = G.particles.filter(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.95; p.vy *= 0.95;
+    p.life--;
+    return p.life > 0;
+  });
+
+  // ─── DRAW ─────────────────────────────────────────────────
+  drawBackground();
+  G.doors.forEach(drawDoor);
+  G.hearts.forEach(drawHeart);
+  drawJar(G.jar, jarBob);
+  drawKey(G.key);
+  G.bees.forEach(drawBee);
+  drawBear(b);
+  drawParticles();
+
+  animId = requestAnimationFrame(gameLoop);
+}
+
+// ─── GAME FLOW ────────────────────────────────────────────────
+
+function showOverlay(id) {
+  ['overlay-start','overlay-levelclear','overlay-gameover','overlay-win'].forEach(x => {
+    document.getElementById(x).classList.remove('active');
+  });
+  if (id) document.getElementById(id).classList.add('active');
+}
+
+function startGame() {
+  G.score = 0; G.lives = 3;
+  initGame(1);
+  showOverlay(null);
+  G.running = true;
+  cancelAnimationFrame(animId);
+  gameLoop();
+}
+
+function levelClear() {
+  G.running = false;
+  cancelAnimationFrame(animId);
+  document.getElementById('key-timer-bar-wrap').style.display = 'none';
+
+  if (G.level >= 10) {
+    document.getElementById('win-sub').innerHTML = `Total Score: ${G.score}<br>All 10 levels cleared! 🏆`;
+    showOverlay('overlay-win');
+    return;
+  }
+
+  document.getElementById('lc-title').textContent = `LEVEL ${G.level} CLEAR!`;
+  document.getElementById('lc-sub').innerHTML = `Score: ${G.score}<br>Next: ${LEVELS[G.level].goal} jars to collect!`;
+  showOverlay('overlay-levelclear');
+}
+
+function nextLevel() {
+  const nextLvl = G.level + 1;
+  initGame(nextLvl);
+  showOverlay(null);
+  G.running = true;
+  cancelAnimationFrame(animId);
+  gameLoop();
+}
+
+function endGame() {
+  G.running = false;
+  cancelAnimationFrame(animId);
+  document.getElementById('key-timer-bar-wrap').style.display = 'none';
+  document.getElementById('go-sub').innerHTML = `Level: ${G.level}<br>Score: ${G.score}<br>Jars: ${G.jarsCollected}/${G.jarGoal}`;
+  showOverlay('overlay-gameover');
+}
+
+// ─── CONTROLS ─────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// D-pad buttons
+const dpadMap = [
+  ['dbtn-up','up'],['dbtn-down','down'],['dbtn-left','left'],['dbtn-right','right']
+];
+dpadMap.forEach(([id, dir]) => {
+  const el = document.getElementById(id);
+  const on = () => { dpad[dir] = true; el.classList.add('pressed'); };
+  const off = () => { dpad[dir] = false; el.classList.remove('pressed'); };
+  el.addEventListener('touchstart', e => { e.preventDefault(); on(); }, {passive:false});
+  el.addEventListener('touchend', e => { e.preventDefault(); off(); }, {passive:false});
+  el.addEventListener('touchcancel', e => { e.preventDefault(); off(); }, {passive:false});
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
+});
+
+// Swipe controls
+let swipeStart = null;
+canvas.addEventListener('touchstart', e => {
+  swipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, {passive:true});
+canvas.addEventListener('touchend', e => {
+  if (!swipeStart) return;
+  const dx = e.changedTouches[0].clientX - swipeStart.x;
+  const dy = e.changedTouches[0].clientY - swipeStart.y;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  if (adx < 10 && ady < 10) { swipeStart = null; return; }
+  // Apply brief directional push
+  if (adx > ady) { G.bear && (G.bear.x += dx > 0 ? 30 : -30); }
+  else { G.bear && (G.bear.y += dy > 0 ? 30 : -30); }
+  swipeStart = null;
+}, {passive:true});
+
+// Button events
+document.getElementById('btn-start').addEventListener('click', startGame);
+document.getElementById('btn-next').addEventListener('click', nextLevel);
+document.getElementById('btn-restart').addEventListener('click', startGame);
+document.getElementById('btn-win-restart').addEventListener('click', startGame);
+
+// Draw a static title screen
+(function drawTitle() {
+  drawBackground();
+  drawBear({x:CW/2, y:CH/2+30, r:BEAR_R, inv:0});
+  drawJar({x:CW/2+80, y:CH/2+20}, 0);
+})();
+</script>
+</body>
+</html>
